@@ -1,0 +1,13 @@
+{
+    "account_size": 1000,
+    "target_gain_percent": 100,
+    "pips": 10000,
+    "initial_stop": 5000,
+    "risk_percent": 4,
+    "breakeven_stop_level": 1000,
+    "topup_levels": [35, 50, 65],
+    "min_stop_distance": 6,
+    "pip_value": 10,
+    "spread": 2,
+    "mt5_path": "C:\\Program Files\\MetaTrader 5 IC Markets (SC)_OPTIMIZER\\terminal64.exe"
+}
