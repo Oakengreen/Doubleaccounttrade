@@ -1,9 +1,10 @@
 from settings import (
-    breakeven_stop_level, initial_stop_percent, account_size,
+    initial_stop_level, initial_stop_percent, account_size,
     number_of_pips, top_up_levels1, top_up_levels2, top_up_levels3,
     target_gain_percent
 )
 import MetaTrader5 as mt5
+import pandas as pd
 
 if not mt5.initialize():
     print("MetaTrader 5 initialization failed. Ensure that the terminal is running and properly configured.")
@@ -19,7 +20,7 @@ def calculate_loss_in_dollars(initial_stop_percent, account_size):
     return loss_in_dollars
 
 
-def calculate_initial_lot_size(loss_in_dollars, breakeven_stop_level, pip_value):
+def calculate_initial_lot_size(loss_in_dollars, initial_stop_level, pip_value):
     """
     Beräknar initial lot size för den första traden (marknadsorder).
     :param loss_in_dollars: Förlusten i dollar för traden.
@@ -28,7 +29,7 @@ def calculate_initial_lot_size(loss_in_dollars, breakeven_stop_level, pip_value)
     :return: Initial lot size avrundad till två decimaler.
     """
     # Beräkna lot size
-    lot_size = loss_in_dollars / (breakeven_stop_level * pip_value)
+    lot_size = loss_in_dollars / (initial_stop_level * pip_value)
 
     # Skala ned till två decimaler
     lot_size = round(lot_size, 2)
@@ -150,8 +151,7 @@ loss_in_dollars = calculate_loss_in_dollars(initial_stop_percent, account_size)
 
 
 # Beräkna initial lot size
-initial_lot_size = calculate_initial_lot_size(loss_in_dollars, breakeven_stop_level, pip_value)
-
+initial_lot_size = calculate_initial_lot_size(loss_in_dollars, initial_stop_level, pip_value)
 
 # Beräkna pip gains
 pip_gains = calculate_pip_gain(number_of_pips, spread_in_pips, top_up_levels1, top_up_levels2, top_up_levels3)
@@ -175,5 +175,62 @@ print(f"Gain in $ for Stop 2: {gain_in_dollars_stop_2:.2f}")
 gain_in_dollars_stop_3 = ((total_gain - gain_in_dollars_initial) * top_up_levels3) / (top_up_levels1 + top_up_levels2 + top_up_levels3)
 print(f"Gain in $ for Stop 3: {gain_in_dollars_stop_3:.2f}")
 
-
 summarize_results(pip_value, spread_in_pips, loss_in_dollars, initial_lot_size, pip_gains, gain_in_dollars_initial)
+
+
+# Break even at 1st stop - START
+# Grundläggande variabler
+pips_initial = 0
+pips_stop_1 = top_up_levels1 / number_of_pips
+pips_stop_2 = number_of_pips * top_up_levels2
+pips_stop_3 = number_of_pips * top_up_levels3
+
+# Lots för stop_1
+lots_stop_1 = gain_in_dollars_stop_1 / (pip_gains['stop_1'] * pip_value)
+
+# Nivåer för initial och stop_1 (avrundade och multiplicerade med 10)
+level_initial = round((lots_stop_1 / initial_lot_size) * pips_stop_2 / (lots_stop_1 / initial_lot_size) * 10)
+level_stop_1 = level_initial  # Samma som level_initial, också avrundat
+
+# Spread för initial och stop_1
+spread_initial = initial_lot_size * spread_in_pips * pip_value
+spread_stop_1 = lots_stop_1 * spread_in_pips * pip_value
+
+# Pip gains för initial och stop_1
+pip_gains_initial = level_initial
+pip_gain_stop_1 = level_initial - pips_stop_1
+
+# Resultat för initial och stop_1
+result_initial = initial_lot_size * pip_gains_initial * pip_value
+result_stop_1 = lots_stop_1 * pip_gain_stop_1 * (-pip_value)
+
+# Totalt
+total_spread = pip_value + spread_stop_1
+total_pip_gains = pip_gains_initial - pip_gain_stop_1
+total_result_dollar = result_initial + result_stop_1
+
+# Skapa data för tabellen
+data = {
+    "Level": [level_initial, level_stop_1],
+    "Spread": [spread_initial, spread_stop_1],
+    "Lots": [round(initial_lot_size, 2), round(lots_stop_1, 2)],
+    "Pip Gain": [round(pip_gains_initial, 1), round(pip_gain_stop_1, 1)],
+    "Result": [round(result_initial, 1), round(result_stop_1, 1)]
+}
+
+# Skapa DataFrame
+df = pd.DataFrame(data, index=["Initial", "Stop_1"])
+
+# Lägg till totalsumma längst ned
+df.loc["Total"] = [
+    "",
+    round(total_spread, 1),
+    "",
+    round(total_pip_gains, 1),
+    round(total_result_dollar, 1)
+]
+
+# Visa tabellen
+print(df)
+
+# Break even at 1st stop - END
