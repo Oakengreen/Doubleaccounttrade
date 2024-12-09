@@ -9,6 +9,11 @@ import pandas as pd
 if not mt5.initialize():
     print("MetaTrader 5 initialization failed. Ensure that the terminal is running and properly configured.")
 
+# Konvertera pips till points
+top_up_levels1_points = top_up_levels1 * 10  # 1 pip = 10 points
+top_up_levels2_points = top_up_levels2 * 10
+top_up_levels3_points = top_up_levels3 * 10
+
 def calculate_loss_in_dollars(initial_stop_percent, account_size):
     """
     Beräknar förlusten i dollar för den första traden.
@@ -85,7 +90,7 @@ def get_spread_in_pips(symbol):
     print(f"Symbol Info: ask={symbol_info.ask}, bid={symbol_info.bid}, point={symbol_info.point}")
 
     # Beräkna spread i pips
-    spread_in_pips = (symbol_info.ask - symbol_info.bid) / symbol_info.point
+    spread_in_pips = (symbol_info.ask - symbol_info.bid) / symbol_info.point / 10
 
     if spread_in_pips <= 0:
         print(f"Invalid spread for {symbol}: {spread_in_pips}")
@@ -189,7 +194,7 @@ pips_stop_3 = number_of_pips * top_up_levels3
 lots_stop_1 = gain_in_dollars_stop_1 / (pip_gains['stop_1'] * pip_value)
 
 # Nivåer för initial och stop_1 (avrundade och multiplicerade med 10)
-level_initial = round((lots_stop_1 / initial_lot_size) * pips_stop_2 / (lots_stop_1 / initial_lot_size) * 10)
+level_initial = (lots_stop_1 / initial_lot_size) * pips_stop_2 / (lots_stop_1 / initial_lot_size)
 level_stop_1 = level_initial  # Samma som level_initial, också avrundat
 
 # Spread för initial och stop_1
@@ -198,7 +203,7 @@ spread_stop_1 = lots_stop_1 * spread_in_pips * pip_value
 
 # Pip gains för initial och stop_1
 pip_gains_initial = level_initial
-pip_gain_stop_1 = level_initial - pips_stop_1
+pip_gain_stop_1 = (level_initial - pips_stop_1) * -1
 
 # Resultat för initial och stop_1
 result_initial = initial_lot_size * pip_gains_initial * pip_value
@@ -211,7 +216,7 @@ total_result_dollar = result_initial + result_stop_1
 
 # Skapa data för tabellen
 data = {
-    "Level": [level_initial, level_stop_1],
+    "Level": [round(level_initial, 0), round(level_stop_1, 0)],
     "Spread": [spread_initial, spread_stop_1],
     "Lots": [round(initial_lot_size, 2), round(lots_stop_1, 2)],
     "Pip Gain": [round(pip_gains_initial, 1), round(pip_gain_stop_1, 1)],
@@ -232,5 +237,16 @@ df.loc["Total"] = [
 
 # Visa tabellen
 print(df)
+
+print(f"lots_stop_1: {lots_stop_1}")
+print(f"initial_lot_size: {initial_lot_size}")
+print(f"level_initial: {level_initial}")
+
+# Debugutskrifter för pips_stop_1, pips_stop_2, och pips_stop_3
+print(f"pips_stop_1: {pips_stop_1}")
+print(f"pips_stop_2: {pips_stop_2}")
+print(f"pips_stop_3: {pips_stop_3}")
+
+
 
 # Break even at 1st stop - END
