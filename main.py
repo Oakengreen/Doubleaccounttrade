@@ -29,7 +29,7 @@ def calculate_initial_lot_size(loss_in_dollars, initial_stop_level, pip_value):
     """
     Beräknar initial lot size för den första traden (marknadsorder).
     :param loss_in_dollars: Förlusten i dollar för traden.
-    :param breakeven_stop_level: Antal pips till breakeven-nivån.
+    :param initial_stop_level: Antal pips till breakeven-nivån.
     :param pip_value: Pipvärdet i kontovaluta.
     :return: Initial lot size avrundad till två decimaler.
     """
@@ -135,7 +135,7 @@ def summarize_results(pip_value, spread_in_pips, loss_in_dollars, initial_lot_si
 
 
 # Symbol
-symbol = "GBPJPY"
+symbol = "XAUUSD"
 
 # Hämta spread_in_pips
 spread_in_pips = get_spread_in_pips(symbol)
@@ -187,8 +187,8 @@ summarize_results(pip_value, spread_in_pips, loss_in_dollars, initial_lot_size, 
 # Grundläggande variabler
 pips_initial = 0
 pips_stop_1 = top_up_levels1 / number_of_pips
-pips_stop_2 = number_of_pips * top_up_levels2
-pips_stop_3 = number_of_pips * top_up_levels3
+pips_stop_2 = number_of_pips / (top_up_levels2 / 10)
+pips_stop_3 = number_of_pips / (top_up_levels3 / 10)
 
 # Lots för stop_1
 lots_stop_1 = gain_in_dollars_stop_1 / (pip_gains['stop_1'] * pip_value)
@@ -246,7 +246,5 @@ print(f"level_initial: {level_initial}")
 print(f"pips_stop_1: {pips_stop_1}")
 print(f"pips_stop_2: {pips_stop_2}")
 print(f"pips_stop_3: {pips_stop_3}")
-
-
 
 # Break even at 1st stop - END
