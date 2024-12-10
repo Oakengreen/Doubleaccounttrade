@@ -3,6 +3,7 @@ from settings import (
     number_of_pips, top_up_levels1, top_up_levels2, top_up_levels3,
     target_gain_percent
 )
+from order_execution import place_order, confirm_execution, adjust_volume
 import MetaTrader5 as mt5
 import pandas as pd
 
@@ -135,7 +136,7 @@ def summarize_results(pip_value, spread_in_pips, loss_in_dollars, initial_lot_si
 
 
 # Symbol
-symbol = "XAUUSD"
+symbol = "EURUSD"
 
 # Hämta spread_in_pips
 spread_in_pips = get_spread_in_pips(symbol)
@@ -180,6 +181,18 @@ print(f"Gain in $ for Stop 2: {gain_in_dollars_stop_2:.2f}")
 gain_in_dollars_stop_3 = ((total_gain - gain_in_dollars_initial) * top_up_levels3) / (top_up_levels1 + top_up_levels2 + top_up_levels3)
 print(f"Gain in $ for Stop 3: {gain_in_dollars_stop_3:.2f}")
 
+
+# Beräkna total_gain_actual
+total_gain_actual = (
+    gain_in_dollars_initial +
+    gain_in_dollars_stop_1 +
+    gain_in_dollars_stop_2 +
+    gain_in_dollars_stop_3
+)
+
+# Skriv ut total_gain_actual
+print(f"Total Gain Actual: {total_gain_actual:.2f}")
+
 summarize_results(pip_value, spread_in_pips, loss_in_dollars, initial_lot_size, pip_gains, gain_in_dollars_initial)
 
 
@@ -211,7 +224,7 @@ result_stop_1 = lots_stop_1 * pip_gain_stop_1 * (-pip_value)
 
 # Totalt
 total_spread = pip_value + spread_stop_1
-total_pip_gains = pip_gains_initial - pip_gain_stop_1
+total_pip_gains = pip_gains_initial + (pip_gain_stop_1)
 total_result_dollar = result_initial + result_stop_1
 
 # Skapa data för tabellen
@@ -238,13 +251,171 @@ df.loc["Total"] = [
 # Visa tabellen
 print(df)
 
-print(f"lots_stop_1: {lots_stop_1}")
-print(f"initial_lot_size: {initial_lot_size}")
-print(f"level_initial: {level_initial}")
-
-# Debugutskrifter för pips_stop_1, pips_stop_2, och pips_stop_3
-print(f"pips_stop_1: {pips_stop_1}")
-print(f"pips_stop_2: {pips_stop_2}")
-print(f"pips_stop_3: {pips_stop_3}")
-
 # Break even at 1st stop - END
+
+# Break even at 2nd stop - START
+
+# Lots för stop_2
+lots_stop_2 = gain_in_dollars_stop_2 / (pip_gains['stop_2'] * pip_value)
+
+# Nivåer för stop_2
+level_stop_2 = (lots_stop_2 / lots_stop_1) * pips_stop_3 / (lots_stop_2 / lots_stop_1)
+
+# Spread för stop_2
+spread_stop_2 = lots_stop_2 * spread_in_pips * pip_value
+
+# Pip gains för stop_2
+pip_gain_stop_2 = (level_stop_2 - pips_stop_2) * -1
+
+# Resultat för stop_2
+result_stop_2 = lots_stop_2 * pip_gain_stop_2 * (-pip_value)
+
+# Totalt för 2nd stop
+total_spread_2 = total_spread + spread_stop_2
+total_pip_gains_2 = total_pip_gains + pip_gain_stop_2
+total_result_dollar_2 = total_result_dollar + result_stop_2
+
+# Skapa data för tabellen
+data_2 = {
+    "Level": [round(level_initial, 0), round(level_stop_1, 0), round(level_stop_2, 0)],
+    "Spread": [spread_initial, spread_stop_1, spread_stop_2],
+    "Lots": [round(initial_lot_size, 2), round(lots_stop_1, 2), round(lots_stop_2, 2)],
+    "Pip Gain": [round(pip_gains_initial, 1), round(pip_gain_stop_1, 1), round(pip_gain_stop_2, 1)],
+    "Result": [round(result_initial, 1), round(result_stop_1, 1), round(result_stop_2, 1)]
+}
+
+# Skapa DataFrame
+df_2 = pd.DataFrame(data_2, index=["Initial", "Stop_1", "Stop_2"])
+
+# Lägg till totalsumma längst ned
+df_2.loc["Total"] = [
+    "",
+    round(total_spread_2, 1),
+    "",
+    round(total_pip_gains_2, 1),
+    round(total_result_dollar_2, 1)
+]
+
+# Visa tabellen
+print(df_2)
+
+# Break even at 2nd stop - END
+
+# Break even at 3rd stop - START
+
+# Lots för stop_3
+lots_stop_3 = gain_in_dollars_stop_3 / (pip_gains['stop_3'] * pip_value)
+
+# Nivåer för stop_3
+level_stop_3 = (lots_stop_3 / lots_stop_2) * pips_stop_3 / (lots_stop_3 / lots_stop_2)
+
+# Spread för stop_3
+spread_stop_3 = lots_stop_3 * spread_in_pips * pip_value
+
+# Pip gains för stop_3
+pip_gain_stop_3 = (level_stop_3 - pips_stop_3) * -1
+
+# Resultat för stop_3
+result_stop_3 = lots_stop_3 * pip_gain_stop_3 * (-pip_value)
+
+# Totalt för 3rd stop
+total_spread_3 = total_spread_2 + spread_stop_3
+total_pip_gains_3 = total_pip_gains_2 + pip_gain_stop_3
+total_result_dollar_3 = total_result_dollar_2 + result_stop_3
+
+# Skapa data för tabellen
+data_3 = {
+    "Level": [round(level_initial, 0), round(level_stop_1, 0), round(level_stop_2, 0), round(level_stop_3, 0)],
+    "Spread": [spread_initial, spread_stop_1, spread_stop_2, spread_stop_3],
+    "Lots": [round(initial_lot_size, 2), round(lots_stop_1, 2), round(lots_stop_2, 2), round(lots_stop_3, 2)],
+    "Pip Gain": [round(pip_gains_initial, 1), round(pip_gain_stop_1, 1), round(pip_gain_stop_2, 1), round(pip_gain_stop_3, 1)],
+    "Result": [round(result_initial, 1), round(result_stop_1, 1), round(result_stop_2, 1), round(result_stop_3, 1)]
+}
+
+# Skapa DataFrame
+df_3 = pd.DataFrame(data_3, index=["Initial", "Stop_1", "Stop_2", "Stop_3"])
+
+# Lägg till totalsumma längst ned
+df_3.loc["Total"] = [
+    "",
+    round(total_spread_3, 1),
+    "",
+    round(total_pip_gains_3, 1),
+    round(total_result_dollar_3, 1)
+]
+
+# Visa tabellen
+print(df_3)
+
+# Break even at 3rd stop - END
+
+#Orderhantering
+
+# Fråga användaren om orderläggning
+if not confirm_execution():
+    print("Orderläggning avbruten.")
+    exit()
+
+# Lägg ordrar för initial och stop orders
+print("Lägger order...")
+
+# Lägg marknadsorder
+tp_pips = number_of_pips
+
+# Justera volymen för första stop-order
+adjusted_lot_size = adjust_volume(initial_lot_size, symbol)
+if adjusted_lot_size is None:
+    print(f"Failed to adjust volume for {symbol}. Skipping Stop 1 order.")
+else:
+    place_order(
+        symbol=symbol,
+        lot_size=adjusted_lot_size,
+        order_type='BUY',
+        stop_loss_pips=initial_stop_level,
+        take_profit_pips=tp_pips
+    )
+
+# Justera volymen för första stop-order
+adjusted_lot_size = adjust_volume(lots_stop_1, symbol)
+if adjusted_lot_size is None:
+    print(f"Failed to adjust volume for {symbol}. Skipping Stop 1 order.")
+else:
+    # Lägg första stop-order
+    place_order(
+        symbol=symbol,
+        lot_size=adjusted_lot_size,
+        order_type='BUY_STOP',
+        price=level_stop_1,
+        stop_loss_pips=level_stop_1,
+        take_profit_pips=tp_pips
+    )
+
+# Justera volymen för första stop-order
+adjusted_lot_size = adjust_volume(lots_stop_2, symbol)
+if adjusted_lot_size is None:
+    print(f"Failed to adjust volume for {symbol}. Skipping Stop 2 order.")
+else:
+    # Lägg andra stop-order
+    place_order(
+        symbol=symbol,
+        lot_size=adjusted_lot_size,
+        order_type='BUY_STOP',
+        price=level_stop_2,
+        stop_loss_pips=level_stop_2,
+        take_profit_pips=tp_pips
+    )
+
+# Justera volymen för första stop-order
+adjusted_lot_size = adjust_volume(lots_stop_3, symbol)
+if adjusted_lot_size is None:
+    print(f"Failed to adjust volume for {symbol}. Skipping Stop 3 order.")
+else:
+    # Lägg tredje stop-order
+    place_order(
+        symbol=symbol,
+        lot_size=adjusted_lot_size,
+        order_type='BUY_STOP',
+        price=level_stop_3,
+        stop_loss_pips=level_stop_3,
+        take_profit_pips=tp_pips
+    )
