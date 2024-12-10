@@ -22,58 +22,36 @@ def points_per_pip(symbol):
     # Beräkna points per pip
     return 1 / symbol_info.point
 
-def place_order(symbol, lot_size, order_type, price=None, stop_loss_pips=None, take_profit_pips=None):
+def place_order(symbol, lot_size, order_type, price=None, sl=None, tp=None):
     """
-    Lägger en order på MetaTrader 5-plattformen med specifika SL och TP.
+    Lägger en order på MetaTrader 5-plattformen med specifika prisnivåer för SL och TP.
     """
     if not mt5.symbol_select(symbol, True):
-        print(f"Failed to select symbol {symbol}. Exiting.")
-        logging.error(f"Failed to select symbol {symbol}.")
+        print(f"Failed to select symbol {symbol}.")
         return None
 
-    # Hämta symbolinformation och tickdata
+    # Hämta symbolinfo och aktuellt tickdata
     symbol_info = mt5.symbol_info(symbol)
     tick = mt5.symbol_info_tick(symbol)
     if not symbol_info or not tick:
         print(f"Failed to retrieve symbol info or tick data for {symbol}.")
         return None
 
-    # Beräkna points per pip
-    points_per_pip_value = points_per_pip(symbol)
-    if points_per_pip_value is None:
-        print(f"Failed to calculate points per pip for {symbol}.")
+    # Kontrollera prisnivåer
+    if sl and sl < 0:
+        print(f"Invalid SL price: {sl}. Check your SL calculation.")
+        return None
+    if tp and tp < 0:
+        print(f"Invalid TP price: {tp}. Check your TP calculation.")
         return None
 
-    # Om `price` är None, sätt standardpris
-    price = price or (tick.ask if order_type in ['BUY', 'BUY_STOP'] else tick.bid)
-
-    # Konvertera SL och TP från pips till prisnivåer
-    point = symbol_info.point
-
-    # Justera prisnivåer baserat på ordertyp
-    if order_type in ['BUY', 'BUY_STOP']:
-        sl = price - stop_loss_pips * point * points_per_pip_value if stop_loss_pips else None
-        tp = price + take_profit_pips * point * points_per_pip_value if take_profit_pips else None
-    elif order_type in ['SELL', 'SELL_STOP']:
-        sl = price + stop_loss_pips * point * points_per_pip_value if stop_loss_pips else None
-        tp = price - take_profit_pips * point * points_per_pip_value if take_profit_pips else None
-
-    # Kontrollera pris för pending orders
-    if order_type in ['BUY_STOP', 'SELL_STOP']:
-        if order_type == 'BUY_STOP' and price <= tick.ask:
-            print(f"Invalid price for BUY_STOP: {price}. Must be above current ASK.")
-            return
-        elif order_type == 'SELL_STOP' and price >= tick.bid:
-            print(f"Invalid price for SELL_STOP: {price}. Must be below current BID.")
-            return
-
-    # Skapa orderbegäran
+    # Bygg orderrequest
     request = {
         "action": mt5.TRADE_ACTION_DEAL if order_type in ['BUY', 'SELL'] else mt5.TRADE_ACTION_PENDING,
         "symbol": symbol,
         "volume": lot_size,
         "type": mt5.ORDER_TYPE_BUY if order_type == 'BUY' else mt5.ORDER_TYPE_SELL if order_type == 'SELL' else mt5.ORDER_TYPE_BUY_STOP if order_type == 'BUY_STOP' else mt5.ORDER_TYPE_SELL_STOP,
-        "price": round(price, symbol_info.digits),
+        "price": round(price, symbol_info.digits) if price else None,
         "sl": round(sl, symbol_info.digits) if sl else None,
         "tp": round(tp, symbol_info.digits) if tp else None,
         "deviation": 10,
@@ -119,6 +97,38 @@ def adjust_volume(volume, symbol):
     # Anpassa till närmaste volymsteg
     volume = round(volume / volume_step) * volume_step
     return volume
+
+def calculate_sl_price(entry_price, sl_pips, order_type, point, points_per_pip_value):
+    """
+    Beräknar giltigt Stop Loss-pris.
+    """
+    sl_price = None
+    if order_type == 'BUY':
+        sl_price = entry_price - sl_pips * point * points_per_pip_value
+    elif order_type == 'SELL':
+        sl_price = entry_price + sl_pips * point * points_per_pip_value
+
+    if sl_price and sl_price < 0:
+        print(f"Invalid SL price calculated: {sl_price}.")
+        return None
+
+    return round(sl_price, 5)
+
+def calculate_tp_price(entry_price, tp_pips, order_type, point, points_per_pip_value):
+    """
+    Beräknar giltigt Take Profit-pris.
+    """
+    tp_price = None
+    if order_type == 'BUY':
+        tp_price = entry_price + tp_pips * point * points_per_pip_value
+    elif order_type == 'SELL':
+        tp_price = entry_price - tp_pips * point * points_per_pip_value
+
+    if tp_price and tp_price < 0:
+        print(f"Invalid TP price calculated: {tp_price}.")
+        return None
+
+    return round(tp_price, 5)
 
 def confirm_execution():
     """

@@ -3,7 +3,7 @@ from settings import (
     number_of_pips, top_up_levels1, top_up_levels2, top_up_levels3,
     target_gain_percent
 )
-from order_execution import place_order, confirm_execution, adjust_volume
+from order_execution import place_order, confirm_execution, adjust_volume, calculate_sl_price, points_per_pip, calculate_tp_price
 import MetaTrader5 as mt5
 import pandas as pd
 
@@ -359,63 +359,131 @@ if not confirm_execution():
 # Lägg ordrar för initial och stop orders
 print("Lägger order...")
 
-# Lägg marknadsorder
-tp_pips = number_of_pips
-
-# Justera volymen för första stop-order
+# Beräkna Stop Loss och lägg Initial Order
 adjusted_lot_size = adjust_volume(initial_lot_size, symbol)
 if adjusted_lot_size is None:
-    print(f"Failed to adjust volume for {symbol}. Skipping Stop 1 order.")
+    print(f"Failed to adjust volume for {symbol}. Skipping Initial order.")
 else:
-    place_order(
-        symbol=symbol,
-        lot_size=adjusted_lot_size,
+    # Aktuellt pris från tickdata
+    current_price = mt5.symbol_info_tick(symbol).ask
+
+    # Beräkna SL och TP
+    sl_price_initial = calculate_sl_price(
+        entry_price=current_price,
+        sl_pips=initial_stop_level,
         order_type='BUY',
-        stop_loss_pips=initial_stop_level,
-        take_profit_pips=tp_pips
+        point=mt5.symbol_info(symbol).point,
+        points_per_pip_value=points_per_pip(symbol)
     )
 
-# Justera volymen för första stop-order
+    tp_price_initial = calculate_tp_price(
+        entry_price=current_price,
+        tp_pips=number_of_pips,
+        order_type='BUY',
+        point=mt5.symbol_info(symbol).point,
+        points_per_pip_value=points_per_pip(symbol)
+    )
+
+    # Lägg initial order
+    place_order(
+        symbol=symbol,
+        lot_size=adjust_volume(initial_lot_size, symbol),
+        order_type='BUY',
+        price=current_price,
+        sl=sl_price_initial,
+        tp=tp_price_initial
+    )
+
+# Beräkna Stop Loss och lägg Stop 1 Order
 adjusted_lot_size = adjust_volume(lots_stop_1, symbol)
 if adjusted_lot_size is None:
     print(f"Failed to adjust volume for {symbol}. Skipping Stop 1 order.")
 else:
-    # Lägg första stop-order
-    place_order(
-        symbol=symbol,
-        lot_size=adjusted_lot_size,
-        order_type='BUY_STOP',
-        price=level_stop_1,
-        stop_loss_pips=level_stop_1,
-        take_profit_pips=tp_pips
+    # Stop 1 Order
+    sl_price_stop_1 = calculate_sl_price(
+        entry_price=level_stop_1,
+        sl_pips=level_stop_1,  # Antag att SL för Stop 1 anges i pips
+        order_type='BUY',
+        point=mt5.symbol_info(symbol).point,
+        points_per_pip_value=points_per_pip(symbol)
     )
 
-# Justera volymen för första stop-order
+    tp_price_stop_1 = calculate_tp_price(
+        entry_price=level_stop_1,
+        tp_pips=number_of_pips,
+        order_type='BUY',
+        point=mt5.symbol_info(symbol).point,
+        points_per_pip_value=points_per_pip(symbol)
+    )
+
+    place_order(
+        symbol=symbol,
+        lot_size=adjust_volume(lots_stop_1, symbol),
+        order_type='BUY_STOP',
+        price=level_stop_1,
+        sl=sl_price_stop_1,
+        tp=tp_price_stop_1
+    )
+
+# Beräkna Stop Loss och lägg Stop 2 Order
 adjusted_lot_size = adjust_volume(lots_stop_2, symbol)
 if adjusted_lot_size is None:
     print(f"Failed to adjust volume for {symbol}. Skipping Stop 2 order.")
 else:
-    # Lägg andra stop-order
-    place_order(
-        symbol=symbol,
-        lot_size=adjusted_lot_size,
-        order_type='BUY_STOP',
-        price=level_stop_2,
-        stop_loss_pips=level_stop_2,
-        take_profit_pips=tp_pips
+    # Stop 1 Order
+    sl_price_stop_1 = calculate_sl_price(
+        entry_price=level_stop_2,
+        sl_pips=level_stop_1,  # Antag att SL för Stop 1 anges i pips
+        order_type='BUY',
+        point=mt5.symbol_info(symbol).point,
+        points_per_pip_value=points_per_pip(symbol)
     )
 
-# Justera volymen för första stop-order
+    tp_price_stop_1 = calculate_tp_price(
+        entry_price=level_stop_2,
+        tp_pips=number_of_pips,
+        order_type='BUY',
+        point=mt5.symbol_info(symbol).point,
+        points_per_pip_value=points_per_pip(symbol)
+    )
+
+    place_order(
+        symbol=symbol,
+        lot_size=adjust_volume(lots_stop_2, symbol),
+        order_type='BUY_STOP',
+        price=level_stop_1,
+        sl=sl_price_stop_1,
+        tp=tp_price_stop_1
+    )
+
+# Beräkna Stop Loss och lägg Stop 3 Order
 adjusted_lot_size = adjust_volume(lots_stop_3, symbol)
 if adjusted_lot_size is None:
     print(f"Failed to adjust volume for {symbol}. Skipping Stop 3 order.")
 else:
-    # Lägg tredje stop-order
+    # Stop 1 Order
+    sl_price_stop_1 = calculate_sl_price(
+        entry_price=level_stop_3,
+        sl_pips=level_stop_1,  # Antag att SL för Stop 1 anges i pips
+        order_type='BUY',
+        point=mt5.symbol_info(symbol).point,
+        points_per_pip_value=points_per_pip(symbol)
+    )
+
+    tp_price_stop_1 = calculate_tp_price(
+        entry_price=level_stop_3,
+        tp_pips=number_of_pips,
+        order_type='BUY',
+        point=mt5.symbol_info(symbol).point,
+        points_per_pip_value=points_per_pip(symbol)
+    )
+
     place_order(
         symbol=symbol,
-        lot_size=adjusted_lot_size,
+        lot_size=adjust_volume(lots_stop_3, symbol),
         order_type='BUY_STOP',
-        price=level_stop_3,
-        stop_loss_pips=level_stop_3,
-        take_profit_pips=tp_pips
+        price=level_stop_1,
+        sl=sl_price_stop_1,
+        tp=tp_price_stop_1
     )
+
